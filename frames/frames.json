@@ -1,0 +1,285 @@
+{
+  "frames": [
+    {
+      "id": "zine-fotokopi",
+      "name": "Zine Fotokopi",
+      "file": "zine-fotokopi.svg",
+      "caption": {
+        "text": "edisi malam minggu",
+        "font": "Special Elite",
+        "size": 46,
+        "color": "#141414",
+        "x": 300,
+        "y": 1656,
+        "rotate": -2
+      },
+      "footerColor": "#141414",
+      "slots": [
+        {
+          "x": 46,
+          "y": 35,
+          "w": 489,
+          "h": 538
+        },
+        {
+          "x": 104,
+          "y": 605,
+          "w": 429,
+          "h": 438
+        },
+        {
+          "x": 52,
+          "y": 1077,
+          "w": 464,
+          "h": 474
+        }
+      ]
+    },
+    {
+      "id": "riso-gig-poster",
+      "name": "Riso Gig Poster",
+      "file": "riso-gig-poster.svg",
+      "caption": {
+        "text": "LIVE TONIGHT",
+        "font": "Archivo Black",
+        "size": 54,
+        "color": "#141414",
+        "x": 300,
+        "y": 1664,
+        "rotate": -1
+      },
+      "footerColor": "#141414",
+      "slots": [
+        {
+          "x": 50,
+          "y": 44,
+          "w": 501,
+          "h": 541
+        },
+        {
+          "x": 31,
+          "y": 636,
+          "w": 431,
+          "h": 401
+        },
+        {
+          "x": 136,
+          "y": 1088,
+          "w": 441,
+          "h": 431
+        }
+      ]
+    },
+    {
+      "id": "tiket-masuk",
+      "name": "Tiket Masuk",
+      "file": "tiket-masuk.svg",
+      "caption": {
+        "text": "1 orang · berdiri · no refund",
+        "font": "Space Mono",
+        "size": 25,
+        "color": "#3b2a1a",
+        "x": 300,
+        "y": 1676,
+        "rotate": 0
+      },
+      "footerColor": "#3b2a1a",
+      "slots": [
+        {
+          "x": 61,
+          "y": 40,
+          "w": 471,
+          "h": 501
+        },
+        {
+          "x": 112,
+          "y": 626,
+          "w": 401,
+          "h": 431
+        },
+        {
+          "x": 75,
+          "y": 1142,
+          "w": 431,
+          "h": 441
+        }
+      ]
+    },
+    {
+      "id": "roll-film-35mm",
+      "name": "Roll Film 35mm",
+      "file": "roll-film-35mm.svg",
+      "defaultFilter": "analog",
+      "caption": {
+        "text": "iso 400 · jangan lupa scan",
+        "font": "Space Mono",
+        "size": 26,
+        "color": "#ffb25e",
+        "x": 300,
+        "y": 1668,
+        "rotate": 0
+      },
+      "footerColor": "#ffb25e",
+      "slots": [
+        {
+          "x": 86,
+          "y": 40,
+          "w": 437,
+          "h": 451
+        },
+        {
+          "x": 76,
+          "y": 586,
+          "w": 441,
+          "h": 451
+        },
+        {
+          "x": 90,
+          "y": 1132,
+          "w": 425,
+          "h": 451
+        }
+      ]
+    },
+    {
+      "id": "kaset-pita",
+      "name": "Kaset Pita",
+      "file": "kaset-pita.svg",
+      "caption": {
+        "text": "side A — lagu galau",
+        "font": "Permanent Marker",
+        "size": 40,
+        "color": "#6b3a1e",
+        "x": 306,
+        "y": 1660,
+        "rotate": -1.5
+      },
+      "footerColor": "#6b3a1e",
+      "slots": [
+        {
+          "x": 60,
+          "y": 40,
+          "w": 481,
+          "h": 501
+        },
+        {
+          "x": 130,
+          "y": 632,
+          "w": 401,
+          "h": 421
+        },
+        {
+          "x": 64,
+          "y": 1144,
+          "w": 441,
+          "h": 451
+        }
+      ]
+    },
+    {
+      "id": "tote-sticker-bomb",
+      "name": "Tote Bag Sticker Bomb",
+      "file": "tote-sticker-bomb.svg",
+      "caption": {
+        "text": "bawa tumbler sendiri",
+        "font": "Permanent Marker",
+        "size": 40,
+        "color": "#2f3e6b",
+        "x": 300,
+        "y": 1662,
+        "rotate": 1.5
+      },
+      "footerColor": "#2f3e6b",
+      "slots": [
+        {
+          "x": 48,
+          "y": 34,
+          "w": 497,
+          "h": 525
+        },
+        {
+          "x": 71,
+          "y": 587,
+          "w": 438,
+          "h": 466
+        },
+        {
+          "x": 77,
+          "y": 1084,
+          "w": 462,
+          "h": 490
+        }
+      ]
+    },
+    {
+      "id": "y2k-chrome",
+      "name": "Y2K Chrome",
+      "file": "y2k-chrome.svg",
+      "caption": {
+        "text": "online 24/7",
+        "font": "Rubik Mono One",
+        "size": 40,
+        "color": "#2a1f6e",
+        "x": 300,
+        "y": 1672,
+        "rotate": 0
+      },
+      "footerColor": "#2a1f6e",
+      "slots": [
+        {
+          "x": 50,
+          "y": 62,
+          "w": 501,
+          "h": 421
+        },
+        {
+          "x": 38,
+          "y": 604,
+          "w": 461,
+          "h": 381
+        },
+        {
+          "x": 77,
+          "y": 1106,
+          "w": 491,
+          "h": 411
+        }
+      ]
+    },
+    {
+      "id": "kopi-susu-senja",
+      "name": "Kopi Susu Senja",
+      "file": "kopi-susu-senja.svg",
+      "caption": {
+        "text": "senja, kopi, dan kamu",
+        "font": "Caveat",
+        "size": 58,
+        "color": "#2a1650",
+        "x": 300,
+        "y": 1656,
+        "rotate": -1.5
+      },
+      "footerColor": "#ffd9a8",
+      "slots": [
+        {
+          "x": 76,
+          "y": 44,
+          "w": 441,
+          "h": 521
+        },
+        {
+          "x": 70,
+          "y": 614,
+          "w": 401,
+          "h": 441
+        },
+        {
+          "x": 116,
+          "y": 1104,
+          "w": 421,
+          "h": 461
+        }
+      ]
+    }
+  ]
+}
