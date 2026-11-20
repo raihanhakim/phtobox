@@ -18,7 +18,7 @@ const S = {
   room: null, me: { name: '', city: '', tz: '' }, partner: null, connStatus: 'connecting',
   ready: { me: false, partner: false },
   running: false, token: 0, retake: null, current: -1, sending: 0, takenAt: null, serial: null,
-  blob: null, url: null, renderToken: 0, slotEls: [], lobbyTab: 'create',
+  blob: null, url: null, mime: 'image/png', renderToken: 0, slotEls: [], lobbyTab: 'create',
 };
 const el = {
   cam: $('#cam'), remote: $('#remote'), strip: $('#live-strip'), start: $('#btn-start'), ready: $('#btn-ready'),
@@ -444,15 +444,19 @@ async function render() {
   if (tk !== S.renderToken) return;
   setBlob(blob);
 }
-function setBlob(blob) {
+function setBlob(blob, mime) {
   if (S.url) URL.revokeObjectURL(S.url);
-  S.blob = blob; S.url = URL.createObjectURL(blob);
+  S.blob = blob; S.mime = mime || blob.type || 'image/png'; S.url = URL.createObjectURL(blob);
   $$('#print-sheet img').forEach(i => { i.src = S.url; });
 }
 
-const fileName = () => { const d = new Date(); return `karebooth-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.png`; };
+const extOf = m => (m === 'image/jpeg' ? 'jpg' : 'png');
+const fileName = () => { const d = new Date(); return `karebooth-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.${extOf(S.mime)}`; };
 function canShareFiles() {
-  try { return !!(navigator.share && navigator.canShare && navigator.canShare({ files: [new File([new Blob(['x'], { type: 'image/png' })], 'a.png', { type: 'image/png' })] })); } catch (e) { return false; }
+  try {
+    const type = S.mime || 'image/png';
+    return !!(navigator.share && navigator.canShare && navigator.canShare({ files: [new File([new Blob(['x'], { type })], 'a.' + extOf(type), { type })] }));
+  } catch (e) { return false; }
 }
 
 /* ===================== sesi foto ===================== */
@@ -490,7 +494,9 @@ function takeLocal(slot) {
 
 async function sendPhoto(slot, canvas) {
   if (!S.room || !canvas) return;
-  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+  // q0.85: ukuran turun ±27% dibanding q0.9 tapi bedanya nggak kelihatan di cetakan sekecil ini.
+  // Resolusi sengaja nggak dikecilkan — layout atas-bawah butuh sumber selebar aslinya.
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
   const buf = await blob.arrayBuffer();
   S.sending++; updateSending();
   S.room.send({ type: 'photo', slot, buf });
@@ -678,23 +684,35 @@ async function submitLobby(ev) {
   S.role = joining ? 'guest' : 'host';
   document.body.dataset.role = S.role;
   $('#lobby-error').hidden = true; $('#btn-lobby-go').disabled = true;
-  $('#lobby-loading').hidden = false; $('#lobby-loading').textContent = 'nyalain kamera dan mic…';
+  $('#lobby-loading').hidden = false; $('#lobby-loading').textContent = 'nyiapin kamera, mic, dan koneksi…';
   sfx.unlock();
-  try {
-    if (!S.stream) bindLocal(await openCamera({ audio: true }));
-  } catch (e) { return lobbyError(e.userMessage || 'kamera/mic nggak bisa nyala.', true); }
+
+  // Kamera dan pendaftaran ke server signaling dikerjakan barengan, bukan berurutan:
+  // dua-duanya nunggu jaringan dan nggak saling butuh. Ini yang paling kerasa di data seluler.
+  const room = new Room({ role: S.role, me: S.me, stream: S.stream, handlers: roomHandlers() });
+  S.room = room;
+  if (joining) room.preopen().catch(() => { /* nanti dicoba lagi di join() */ });
+
+  let stream;
+  try { stream = S.stream || await openCamera({ audio: true }); }
+  catch (e) {
+    try { room.close(); } catch (x) { /* abaikan */ }
+    S.room = null;
+    return lobbyError(e.userMessage || 'kamera/mic nggak bisa nyala.', true);
+  }
+  if (S.stream !== stream) bindLocal(stream);
+  room.attachStream(stream);
 
   $('#lobby-loading').textContent = joining ? 'nyambung ke room…' : 'bikin room…';
-  S.room = new Room({ role: S.role, me: S.me, stream: S.stream, handlers: roomHandlers() });
   try {
-    if (joining) await S.room.join(code);
+    if (joining) await room.join(code);
     else {
-      const c = await S.room.createRoom();
+      const c = await room.createRoom();
       $('#lobby-loading').hidden = true;
       showWait(c);
     }
   } catch (e) {
-    try { S.room.close(); } catch (x) { /* abaikan */ }
+    try { room.close(); } catch (x) { /* abaikan */ }
     S.room = null;
     lobbyError(ERR_TEXT[e] || ERR_TEXT.server, true);
   }
@@ -765,16 +783,24 @@ async function onRoomMessage(m) {
 async function sendFinal() {
   if (!S.blob || !S.room) return;
   setBanner('ngirim strip ke dia…');
-  const buf = await S.blob.arrayBuffer();
-  S.room.send({ type: 'final', buf });
+  // PNG 1200x3600 itu ±5 MB — di jaringan seluler bisa 10-30 detik. JPEG q0.92 ±1,1 MB
+  // dan bedanya nggak kelihatan. Yang disimpan host tetap PNG; yang dikirim versi ringan.
+  let out = S.blob, type = S.blob.type || 'image/png';
+  if (el.canvas.width && el.canvas.height) {
+    const jpg = await new Promise(r => el.canvas.toBlob(r, 'image/jpeg', 0.92));
+    if (jpg) { out = jpg; type = 'image/jpeg'; }
+  }
+  const buf = await out.arrayBuffer();
+  S.room.send({ type: 'final', buf, mime: type });
 }
 async function receiveFinal(m) {
-  const blob = new Blob([m.buf], { type: 'image/png' });
+  const mime = m.mime || 'image/png';
+  const blob = new Blob([m.buf], { type: mime });
   const bmp = await createImageBitmap(blob);
   S.renderToken++;
   el.canvas.width = bmp.width; el.canvas.height = bmp.height;
   el.canvas.getContext('2d').drawImage(bmp, 0, 0);
-  setBlob(blob);
+  setBlob(blob, mime);
   S.room && S.room.send({ type: 'finalAck' });
 }
 
@@ -865,7 +891,7 @@ function wire() {
   });
   $('#btn-share').addEventListener('click', async () => {
     if (!S.blob) return;
-    try { await navigator.share({ files: [new File([S.blob], fileName(), { type: 'image/png' })], title: 'karebooth' }); } catch (e) { if (e.name !== 'AbortError') console.warn(e); }
+    try { await navigator.share({ files: [new File([S.blob], fileName(), { type: S.mime || 'image/png' })], title: 'karebooth' }); } catch (e) { if (e.name !== 'AbortError') console.warn(e); }
   });
   $('#btn-print').addEventListener('click', () => window.print());
   $('#btn-sendfinal').addEventListener('click', sendFinal);
