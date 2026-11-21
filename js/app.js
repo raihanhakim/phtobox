@@ -1,6 +1,6 @@
 import { detectSlots } from './slots.js';
 import { openCamera, stopStream, captureRaw, checkSupport } from './camera.js';
-import { renderStrip, drawSlot, slotParts, slotRect, FILTERS, FILTER_CSS, FRAME_W, FRAME_H } from './compose.js';
+import { renderStrip, drawSlot, slotRect, partBoxes, FILTERS, FILTER_CSS, FRAME_W, FRAME_H } from './compose.js';
 import { Room, normalizeCode } from './ldr.js';
 import * as sfx from './audio.js';
 
@@ -325,24 +325,19 @@ function refreshLive() {
     d.innerHTML = ''; d.classList.toggle('active', i === active);
     const slot = f.slots[i], r = slotRect(slot, 1);
     if (i === active) {
-      const parts = slotParts(S.cfg.layout, r.w, r.h, S.cfg.swap);
-      for (const p of parts) {
+      // geometri bagian + pita sambungan dari compose.js: pratinjau live dan hasil
+      // render memakai hitungan yang sama, jadi sambungannya nggak bisa melenceng
+      for (const p of partBoxes(S.cfg.layout, r.w, r.h, S.cfg.swap)) {
         const pd = document.createElement('div');
-        pd.className = 'part' + (p.circle ? ' circle' : '');
+        pd.className = 'part' + (p.circle ? ' circle' : '') + (p.seam ? ' seam seam-' + S.cfg.layout : '');
         Object.assign(pd.style, { left: pct(p.x, r.w), top: pct(p.y, r.h), width: pct(p.w, r.w), height: pct(p.h, r.h) });
+        if (p.seam) pd.style.setProperty('--seam', p.seamPct.toFixed(3) + '%');
         const stream = p.who === mineKey() ? S.stream : S.remoteStream;
         if (stream) {
           const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.autoplay = true;
           v.style.filter = css; v.srcObject = stream; pd.appendChild(v); v.play().catch(() => {});
         }
         d.appendChild(pd);
-      }
-      if (S.cfg.layout === 'lr' || S.cfg.layout === 'tb') {
-        const dv = document.createElement('div'); dv.className = 'divider';
-        if (S.cfg.layout === 'lr') Object.assign(dv.style, { left: 'calc(50% - 1.5px)', top: 0, width: '3px', height: '100%' });
-        else Object.assign(dv.style, { top: 'calc(50% - 1.5px)', left: 0, height: '3px', width: '100%' });
-        const h = document.createElement('div'); h.className = 'heart'; h.textContent = '♥'; h.style.left = '50%'; h.style.top = '50%';
-        d.append(dv, h);
       }
     } else if (S.photos[i] && (S.photos[i].a || S.photos[i].b)) {
       const c = document.createElement('canvas'); c.width = Math.round(r.w); c.height = Math.round(r.h);

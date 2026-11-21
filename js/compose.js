@@ -2,6 +2,9 @@
 
 export const FRAME_W = 600, FRAME_H = 1800;
 export const BLEED = 0.04;
+/* Lebar peleburan sambungan dua foto (bagian dari sisi terpendek slot). Sambungan
+   sengaja dilebur, bukan digaris putih, supaya dua orang kelihatan menyatu. */
+export const SEAM = 0.06;
 export const UI_FONT = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
 const FOOTER_Y1 = 1724, FOOTER_Y2 = 1760;
 
@@ -89,41 +92,78 @@ function drawCover(ctx, img, x, y, w, h) {
   ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, x, y, w, h);
 }
 
-function heart(ctx, cx, cy, s) {
+/** Lebar pita peleburan sambungan, dalam piksel. 0 untuk layout tanpa sambungan. */
+export function seamBand(layout, W, H) {
+  return (layout === 'lr' || layout === 'tb') ? Math.min(W, H) * SEAM : 0;
+}
+
+/**
+ * Kotak tiap bagian untuk pratinjau live (CSS). Sisi kedua dilebarkan selebar pita
+ * sambungan ke arah sisi pertama; seamPct dipakai untuk gradien mask-nya.
+ * Dihitung dari lebar elemen itu sendiri, bukan dari slot, supaya gradien habis tepat
+ * di ujung pita (kalau salah, sisa pita jadi garis keras).
+ */
+export function partBoxes(layout, W, H, swap = false) {
+  const bw = seamBand(layout, W, H);
+  const lr = layout === 'lr', dx = lr ? bw : 0, dy = lr ? 0 : bw;
+  return slotParts(layout, W, H, swap).map((p, i) => {
+    const seam = i === 1 && bw > 0;
+    // sisi kedua ditarik selebar pita ke arah sisi pertama
+    const x = seam ? p.x - dx : p.x, y = seam ? p.y - dy : p.y;
+    const w = seam ? p.w + dx : p.w, h = seam ? p.h + dy : p.h;
+    return { who: p.who, circle: !!p.circle, x, y, w, h, seam,
+      seamPct: seam ? bw / (lr ? w : h) * 100 : 0 };
+  });
+}
+
+/**
+ * Cetak sisi kedua: potongannya ditarik melewati garis sambungan selebar bw lalu dilebur
+ * dengan gradien, jadi sisi pertama kelihatan menyambung tanpa garis potong. Skala foto
+ * tetap sama seperti kalau digambar pas di kotaknya (cuma jendelanya yang lebih lebar).
+ */
+function drawBlend(ctx, img, x, y, w, h, layout, bw) {
+  const lr = layout === 'lr', dx = lr ? bw : 0, dy = lr ? 0 : bw;
+  const nw = Math.ceil(w + dx), nh = Math.ceil(h + dy);
+  const t = document.createElement('canvas'); t.width = nw; t.height = nh;
+  const tc = t.getContext('2d');
+  const k = Math.max(w / img.width, h / img.height);      // skala cover, tidak berubah
+  tc.drawImage(img,
+    (img.width - w / k) / 2 - dx / k, (img.height - h / k) / 2 - dy / k,
+    (w + dx) / k, (h + dy) / k,
+    0, 0, nw, nh);
+  const g = lr ? tc.createLinearGradient(0, 0, bw, 0) : tc.createLinearGradient(0, 0, 0, bw);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)');
+  tc.globalCompositeOperation = 'destination-in';
+  tc.fillStyle = g; tc.fillRect(0, 0, nw, nh);
+  ctx.drawImage(t, x - dx, y - dy, w + dx, h + dy);
+}
+
+function clipPart(ctx, p, x, y) {
   ctx.beginPath();
-  ctx.moveTo(cx, cy + s * 0.9);
-  ctx.bezierCurveTo(cx - s * 1.5, cy - s * 0.1, cx - s * 1.0, cy - s * 1.1, cx, cy - s * 0.4);
-  ctx.bezierCurveTo(cx + s * 1.0, cy - s * 1.1, cx + s * 1.5, cy - s * 0.1, cx, cy + s * 0.9);
-  ctx.closePath();
+  if (p.circle) ctx.arc(x + p.x + p.w / 2, y + p.y + p.h / 2, p.w / 2, 0, Math.PI * 2);
+  else ctx.rect(x + p.x, y + p.y, p.w, p.h);
+  ctx.clip();
 }
 
 /** Gambar isi satu slot ke kotak (x,y,w,h) di ctx. entry = {a, b} berisi canvas foto mentah. */
 export function drawSlot(ctx, entry, x, y, w, h, { layout = 'solo', swap = false, filter = 'normal', s = 1 } = {}) {
+  const bw = seamBand(layout, w, h);
   ctx.save();
   ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
   ctx.fillStyle = '#cfc8bb'; ctx.fillRect(x, y, w, h);
-  const parts = slotParts(layout, w, h, swap);
-  for (const p of parts) {
+  slotParts(layout, w, h, swap).forEach((p, i) => {
     const img = entry && entry[p.who];
-    ctx.save();
-    if (p.circle) {
-      ctx.beginPath(); ctx.arc(x + p.x + p.w / 2, y + p.y + p.h / 2, p.w / 2, 0, Math.PI * 2); ctx.clip();
-    } else { ctx.beginPath(); ctx.rect(x + p.x, y + p.y, p.w, p.h); ctx.clip(); }
-    if (img) drawCover(ctx, filtered(img, filter), x + p.x, y + p.y, p.w, p.h);
+    const pic = img ? filtered(img, filter) : null;
+    ctx.save(); clipPart(ctx, p, x, y);
+    if (pic) drawCover(ctx, pic, x + p.x, y + p.y, p.w, p.h);
     ctx.restore();
-    if (p.circle) {
+    if (p.circle) {                                  // cincin putih jendela kecil
       ctx.lineWidth = 5 * s; ctx.strokeStyle = '#fff';
       ctx.beginPath(); ctx.arc(x + p.x + p.w / 2, y + p.y + p.h / 2, p.w / 2, 0, Math.PI * 2); ctx.stroke();
+    } else if (pic && i === 1 && bw) {                // sisi kedua dilebur, bukan dipisah garis
+      drawBlend(ctx, pic, x + p.x, y + p.y, p.w, p.h, layout, bw);
     }
-  }
-  if (layout === 'lr' || layout === 'tb') {
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * s;
-    ctx.beginPath();
-    if (layout === 'lr') { ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w / 2, y + h); } else { ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); }
-    ctx.stroke();
-    ctx.fillStyle = '#ff5fa2'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5 * s;
-    heart(ctx, x + w / 2, y + h / 2, 11 * s); ctx.fill(); ctx.stroke();
-  }
+  });
   ctx.restore();
 }
 
